@@ -7,9 +7,10 @@ import os
 import sys
 import shutil
 import time
+import urllib.parse
 
 # Set this as the location where your Journal.json file is located
-root = r"D:\OneDrive\Documents\dayone" 
+root = r"/Users/eric/Downloads/dayone"
 icons = False   # Set to true if you are using the Icons Plugin in Obsidian
 tagPrefix = "#journal/"  # This will append journal/ as part of the tag name for sub-tags ie. instead of #entry, it is #journal/entry. To exclude set to "". If you change journal to something else, make sure you keep the trailing /
 
@@ -56,19 +57,19 @@ with open(fn, encoding='utf-8') as json_file:
 
         dateCreated = str(createDate)
         coordinates = ''
- 
+
         frontmatter = '''---
-- created: ''' + dateCreated + '''
+created: ''' + dateCreated + '''
 '''
-        
+
         if 'location' in entry:
             coordinates = str(entry['location']['latitude']) + ',' + str(entry['location']['longitude'])
-            frontmatter = frontmatter +  '- location: [' + coordinates + ']'
+            frontmatter = frontmatter +  'location: [' + coordinates + ']'
         frontmatter = frontmatter + '''
 ---
 '''
         newEntry.append(frontmatter)
- 
+
         # Add date as page header, removing time if it's 12 midday as time obviously not read
         if sys.platform == "win32":
             newEntry.append( '## %s%s\n' % (dateIcon, localDate.strftime( "%A, %#d %B %Y at %#I:%M %p").replace( " at 12:00 PM", "")))
@@ -93,24 +94,47 @@ with open(fn, encoding='utf-8') as json_file:
                         newfn = os.path.join( root, 'photos', '%s.jpeg' % p['identifier'] )
                         print ( 'Renaming %s to %s' % (pfn, newfn ))
                         os.rename( pfn, newfn )
-
                 # Now to replace the text to point to the file in obsidian
                 newText = re.sub(r"(\!\[\]\(dayone-moment:\/\/)([A-F0-9]+)(\))", r'![[\2.jpeg]]', newText)
+
+            if 'pdfAttachments' in entry:
+                # Also handle entry.pdfAttachments
+                for p in entry['pdfAttachments']:
+                    pfn = os.path.join( root, 'pdfs', '%s.pdf' % p['md5'] )
+                    if os.path.isfile( pfn ):
+                        newfn = os.path.join( root, 'pdfs', '%s.pdf' % p['identifier'] )
+                        print ( 'Renaming %s to %s' % (pfn, newfn ))
+                        os.rename( pfn, newfn )
+                # Now to replace the text to point to the file in obsidian
+                newText = re.sub(r"(\!\[\]\(dayone-moment:\/pdfAttachment\/)([A-F0-9]+)(\))", r'![[\2.pdf]]', newText)
+
+            if 'videos' in entry:
+                # Also handle entry.videos
+                for p in entry['videos']:
+                    pfn = os.path.join( root, 'videos', '%s.mov' % p['md5'] )
+                    if os.path.isfile( pfn ):
+                        newfn = os.path.join( root, 'videos', '%s.mov' % p['identifier'] )
+                        print ( 'Renaming %s to %s' % (pfn, newfn ))
+                        os.rename( pfn, newfn )
+                # Now to replace the text to point to the file in obsidian
+                newText = re.sub(r"(\!\[\]\(dayone-moment:\/video\/)([A-F0-9]+)(\))", r'![[\2.mov]]', newText)
+
 
             newEntry.append( newText )
         except KeyError:
             pass
 
-        ## Start Metadata section
 
+        ## Start Metadata section
         newEntry.append( '\n\n---\n' )
 
         if not location == '':
             if coordinates == []:
-                locationString =  location 
+                locationString =  location
             else:
-                locationString = '[' + location + '](geo:' + coordinates + ')'
-            newEntry.append( locationString ) 
+                # locationString = '[' + location + '](geo:' + coordinates + ')'
+               locationString = '[' + location + '](http://maps.apple.com/?q=' +  urllib.parse.quote_plus(location) + '&ll=' + coordinates + ')'
+            newEntry.append( locationString )
 
         # Add GPS, not all entries have this
         # try:
@@ -126,7 +150,7 @@ with open(fn, encoding='utf-8') as json_file:
             if entry['starred']:
                 tags.append( "%sstarred" % (tagPrefix) )
         if len(tags) > 0:
-            newEntry.append( "- Tags: %s\n" % " ".join( tags ))
+            newEntry.append( "\nTags: %s\n" % " ".join( tags ))
 
 
 
@@ -136,13 +160,13 @@ with open(fn, encoding='utf-8') as json_file:
 
         if not os.path.isdir(yearDir):
             os.mkdir(yearDir)
-        
+
         if not os.path.isdir(monthDir):
             os.mkdir(monthDir)
-        
+
         # Target filename to save to. Will be modified if already exists
         fnNew = os.path.join( monthDir, "%s.md" % localDate.strftime( '%Y-%m-%d'))
-        
+
         # Here is where we handle multiple entries on the same day. Each goes to it's own file
         if os.path.isfile( fnNew):
             # File exists, need to find the next in sequence and append alpha character marker
