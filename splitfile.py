@@ -55,7 +55,7 @@ with open(fn, encoding='utf-8') as json_file:
                 pass
         location = location[2:]
 
-        dateCreated = str(createDate)
+        dateCreated = str(localDate)
         coordinates = ''
 
         frontmatter = '''---
@@ -64,7 +64,7 @@ created: ''' + dateCreated + '''
 
         if 'location' in entry:
             coordinates = str(entry['location']['latitude']) + ',' + str(entry['location']['longitude'])
-            frontmatter = frontmatter +  'location: [' + coordinates + ']'
+            frontmatter = frontmatter +  'location: [' + coordinates + ']\n' + 'locationName: ' + location + '\n'
         frontmatter = frontmatter + '''
 ---
 '''
